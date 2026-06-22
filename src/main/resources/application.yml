@@ -20,3 +20,13 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:3600000}
+
+services:
+  register-adm:
+    url: ${REGISTER_ADM_SERVICE_URL:http://register-adm-service:8084}
+
+bootstrap:
+  admin:
+    name: ${ADMIN_NAME:Administrador Local}
+    email: ${ADMIN_EMAIL:admin@local.test}
+    password: ${ADMIN_PASSWORD:admin123}

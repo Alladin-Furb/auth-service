@@ -33,14 +33,18 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    @Column(name = "profile_id")
+    private Long profileId;
+
     protected User() {
     }
 
-    public User(String name, String email, String password, Role role) {
+    public User(String name, String email, String password, Role role, Long profileId) {
         this.name = name;
         this.email = email;
         this.password = password;
         this.role = role;
+        this.profileId = profileId;
     }
 
     public Long getId() {
@@ -59,11 +63,19 @@ public class User {
         return password;
     }
 
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
     public Role getRole() {
         return role;
     }
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public Long getProfileId() {
+        return profileId;
     }
 }

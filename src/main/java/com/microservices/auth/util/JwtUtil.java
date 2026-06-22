@@ -24,12 +24,16 @@ public class JwtUtil {
 
     public String generateToken(User user) {
         Date now = new Date();
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(String.valueOf(user.getId()))
                 .claim("role", user.getRole().name())
                 .issuedAt(now)
-                .expiration(new Date(now.getTime() + expiration))
-                .signWith(signingKey)
-                .compact();
+                .expiration(new Date(now.getTime() + expiration));
+
+        if (user.getProfileId() != null) {
+            builder.claim("profileId", user.getProfileId());
+        }
+
+        return builder.signWith(signingKey).compact();
     }
 }

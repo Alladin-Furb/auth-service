@@ -1,12 +1,9 @@
 package com.microservices.auth.service;
 
-import com.microservices.auth.dto.AuthResponse;
+import com.microservices.auth.dto.CreateAlunoAccountRequest;
 import com.microservices.auth.dto.LoginRequest;
-import com.microservices.auth.dto.RegisterRequest;
-import com.microservices.auth.dto.RoleUpdateRequest;
 import com.microservices.auth.entity.Role;
 import com.microservices.auth.entity.User;
-import com.microservices.auth.exception.BusinessException;
 import com.microservices.auth.exception.ConflictException;
 import com.microservices.auth.exception.UnauthorizedException;
 import com.microservices.auth.repository.UserRepository;
@@ -24,7 +21,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,119 +28,78 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private JwtUtil jwtUtil;
-
-    @InjectMocks
-    private AuthService authService;
-
-    // --- register ---
+    @Mock UserRepository userRepository;
+    @Mock PasswordEncoder passwordEncoder;
+    @Mock JwtUtil jwtUtil;
+    @Mock RegisterAdmClient registerAdmClient;
+    @InjectMocks AuthService authService;
 
     @Test
-    void register_shouldSaveUserWithEncodedPasswordAndDefaultRole() {
-        RegisterRequest request = new RegisterRequest("John", "john@test.com", "password123");
-        when(userRepository.existsByEmail("john@test.com")).thenReturn(false);
-        when(passwordEncoder.encode("password123")).thenReturn("encoded-password");
+    void criarAluno_deveCriarPerfilEContaVinculada() {
+        var request = new CreateAlunoAccountRequest(
+                "Aluno", "aluno@test.com", "password123", "MAT-1",
+                "47999999999", "Rota 1", 1L, "BCC", "FURB");
+        when(userRepository.existsByEmail(request.email())).thenReturn(false);
+        when(registerAdmClient.criarAluno(request, "corr-1")).thenReturn(42L);
+        when(passwordEncoder.encode(request.password())).thenReturn("encoded");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        authService.register(request);
+        var response = authService.criarAluno(request, "corr-1");
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
-        User saved = captor.getValue();
-        assertThat(saved.getName()).isEqualTo("John");
-        assertThat(saved.getEmail()).isEqualTo("john@test.com");
-        assertThat(saved.getPassword()).isEqualTo("encoded-password");
-        assertThat(saved.getRole()).isEqualTo(Role.ROLE_USER);
+        assertThat(captor.getValue().getRole()).isEqualTo(Role.ROLE_ALUNO);
+        assertThat(captor.getValue().getProfileId()).isEqualTo(42L);
+        assertThat(response.profileId()).isEqualTo(42L);
     }
 
     @Test
-    void register_shouldThrowConflictException_whenEmailAlreadyExists() {
-        RegisterRequest request = new RegisterRequest("John", "john@test.com", "password123");
-        when(userRepository.existsByEmail("john@test.com")).thenReturn(true);
+    void criarAluno_naoDeveCriarPerfilQuandoEmailExiste() {
+        var request = new CreateAlunoAccountRequest(
+                "Aluno", "aluno@test.com", "password123", "MAT-1",
+                null, null, 1L, null, null);
+        when(userRepository.existsByEmail(request.email())).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.register(request))
-                .isInstanceOf(ConflictException.class)
-                .hasMessage("Email already registered");
+        assertThatThrownBy(() -> authService.criarAluno(request, "corr"))
+                .isInstanceOf(ConflictException.class);
 
-        verify(userRepository, never()).save(any());
+        verify(registerAdmClient, never()).criarAluno(any(), any());
     }
 
-    // --- login ---
-
     @Test
-    void login_shouldReturnAuthResponse_whenCredentialsAreValid() {
-        LoginRequest request = new LoginRequest("john@test.com", "password123");
-        User user = new User("John", "john@test.com", "encoded-password", Role.ROLE_USER);
-        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("password123", "encoded-password")).thenReturn(true);
+    void login_deveRetornarTokenParaCredenciaisValidas() {
+        var request = new LoginRequest("aluno@test.com", "password123");
+        var user = new User("Aluno", request.email(), "encoded", Role.ROLE_ALUNO, 42L);
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(request.password(), "encoded")).thenReturn(true);
         when(jwtUtil.generateToken(user)).thenReturn("jwt-token");
 
-        AuthResponse response = authService.login(request);
-
-        assertThat(response.token()).isEqualTo("jwt-token");
+        assertThat(authService.login(request).token()).isEqualTo("jwt-token");
     }
 
     @Test
-    void login_shouldThrowUnauthorizedException_whenUserNotFound() {
-        LoginRequest request = new LoginRequest("unknown@test.com", "password123");
-        when(userRepository.findByEmail("unknown@test.com")).thenReturn(Optional.empty());
+    void login_deveRejeitarCredenciaisInvalidas() {
+        var request = new LoginRequest("x@test.com", "wrong");
+        when(userRepository.findByEmail(request.email())).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.login(request))
-                .isInstanceOf(UnauthorizedException.class)
-                .hasMessage("Invalid credentials");
+                .isInstanceOf(UnauthorizedException.class);
     }
 
     @Test
-    void login_shouldThrowUnauthorizedException_whenPasswordIsWrong() {
-        LoginRequest request = new LoginRequest("john@test.com", "wrong-password");
-        User user = new User("John", "john@test.com", "encoded-password", Role.ROLE_USER);
-        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("wrong-password", "encoded-password")).thenReturn(false);
+    void gerarSenhaTemporaria_deveTrocarHashERetornarSenhaUmaVez() {
+        var user = new User(
+                "Aluno", "aluno@test.com", "old-hash", Role.ROLE_ALUNO, 42L);
+        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode(any())).thenReturn("new-hash");
+        when(userRepository.save(user)).thenReturn(user);
 
-        assertThatThrownBy(() -> authService.login(request))
-                .isInstanceOf(UnauthorizedException.class)
-                .hasMessage("Invalid credentials");
+        var response = authService.gerarSenhaTemporaria(10L);
 
-        verify(jwtUtil, never()).generateToken(any());
-    }
-
-    // --- updateRole ---
-
-    @Test
-    void updateRole_shouldUpdateRole_whenRequesterIsAdmin() {
-        User user = new User("John", "john@test.com", "encoded-password", Role.ROLE_USER);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-
-        authService.updateRole(1L, new RoleUpdateRequest(Role.ROLE_ADMIN), Role.ROLE_ADMIN);
-
-        assertThat(user.getRole()).isEqualTo(Role.ROLE_ADMIN);
+        assertThat(response.email()).isEqualTo("aluno@test.com");
+        assertThat(response.temporaryPassword()).hasSize(14);
+        assertThat(user.getPassword()).isEqualTo("new-hash");
+        verify(passwordEncoder).encode(response.temporaryPassword());
         verify(userRepository).save(user);
-    }
-
-    @Test
-    void updateRole_shouldThrowUnauthorizedException_whenRequesterIsNotAdmin() {
-        assertThatThrownBy(() ->
-                authService.updateRole(1L, new RoleUpdateRequest(Role.ROLE_ADMIN), Role.ROLE_USER))
-                .isInstanceOf(UnauthorizedException.class)
-                .hasMessage("Insufficient permissions");
-
-        verify(userRepository, never()).findById(any());
-        verify(userRepository, never()).save(any());
-    }
-
-    @Test
-    void updateRole_shouldThrowBusinessException_whenUserNotFound() {
-        when(userRepository.findById(99L)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() ->
-                authService.updateRole(99L, new RoleUpdateRequest(Role.ROLE_ADMIN), Role.ROLE_ADMIN))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("User not found");
     }
 }

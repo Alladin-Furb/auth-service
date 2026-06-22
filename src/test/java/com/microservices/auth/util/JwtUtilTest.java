@@ -32,7 +32,7 @@ class JwtUtilTest {
 
     @Test
     void generateToken_shouldContainUserIdAsSubject() throws Exception {
-        User user = createUserWithId(1L, "John", "john@test.com", "password", Role.ROLE_USER);
+        User user = createUserWithId(1L, "John", "john@test.com", "password", Role.ROLE_ALUNO, 42L);
 
         String token = jwtUtil.generateToken(user);
         Claims claims = parseToken(token);
@@ -42,7 +42,7 @@ class JwtUtilTest {
 
     @Test
     void generateToken_shouldContainRoleClaim() throws Exception {
-        User user = createUserWithId(1L, "John", "john@test.com", "password", Role.ROLE_ADMIN);
+        User user = createUserWithId(1L, "John", "john@test.com", "password", Role.ROLE_ADMIN, null);
 
         String token = jwtUtil.generateToken(user);
         Claims claims = parseToken(token);
@@ -51,8 +51,17 @@ class JwtUtilTest {
     }
 
     @Test
+    void generateToken_shouldContainProfileIdClaim() throws Exception {
+        User user = createUserWithId(1L, "John", "john@test.com", "password", Role.ROLE_ALUNO, 42L);
+
+        Claims claims = parseToken(jwtUtil.generateToken(user));
+
+        assertThat(claims.get("profileId", Integer.class)).isEqualTo(42);
+    }
+
+    @Test
     void generateToken_shouldSetIssuedAtAndExpiration() throws Exception {
-        User user = createUserWithId(1L, "John", "john@test.com", "password", Role.ROLE_USER);
+        User user = createUserWithId(1L, "John", "john@test.com", "password", Role.ROLE_ALUNO, 42L);
 
         String token = jwtUtil.generateToken(user);
         Claims claims = parseToken(token);
@@ -71,8 +80,9 @@ class JwtUtilTest {
                 .getPayload();
     }
 
-    private User createUserWithId(Long id, String name, String email, String password, Role role) throws Exception {
-        User user = new User(name, email, password, role);
+    private User createUserWithId(
+            Long id, String name, String email, String password, Role role, Long profileId) throws Exception {
+        User user = new User(name, email, password, role, profileId);
         Field idField = User.class.getDeclaredField("id");
         idField.setAccessible(true);
         idField.set(user, id);
