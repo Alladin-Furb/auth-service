@@ -9,7 +9,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 public class RegisterAdmClient {
@@ -24,28 +26,29 @@ public class RegisterAdmClient {
         this.baseUrl = baseUrl;
     }
 
-    public Long criarAluno(CreateAlunoAccountRequest request, String correlationId) {
-        return criarPerfil("/admin/alunos", Map.of(
-                "matricula", request.matricula(),
-                "nome", request.name(),
-                "email", request.email(),
-                "telefone", request.telefone() == null ? "" : request.telefone(),
-                "rotaTransporte", request.rotaTransporte() == null ? "" : request.rotaTransporte(),
-                "cursoId", request.cursoId(),
-                "nomeCurso", request.nomeCurso() == null ? "" : request.nomeCurso(),
-                "faculdade", request.faculdade() == null ? "" : request.faculdade(),
-                "confirmouPresenca", false
-        ), correlationId);
+    public UUID criarAluno(CreateAlunoAccountRequest request, String correlationId) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("matricula", request.matricula());
+        body.put("cpf", request.cpf());
+        body.put("nome", request.name());
+        body.put("email", request.email());
+        body.put("telefone", request.telefone() == null ? "" : request.telefone());
+        body.put("rotaTransporte", request.rotaTransporte() == null ? "" : request.rotaTransporte());
+        body.put("cursoId", request.cursoId());
+        body.put("nomeCurso", request.nomeCurso() == null ? "" : request.nomeCurso());
+        body.put("faculdade", request.faculdade() == null ? "" : request.faculdade());
+        body.put("confirmouPresenca", false);
+        return criarPerfil("/admin/alunos", body, correlationId);
     }
 
-    public Long criarMotorista(CreateMotoristaAccountRequest request, String correlationId) {
+    public UUID criarMotorista(CreateMotoristaAccountRequest request, String correlationId) {
         return criarPerfil("/admin/motoristas", Map.of(
                 "nome", request.name(),
                 "carteiraMotorista", request.carteiraMotorista()
         ), correlationId);
     }
 
-    private Long criarPerfil(String path, Object body, String correlationId) {
+    private UUID criarPerfil(String path, Object body, String correlationId) {
         try {
             ProfileResponse response = restClient.post()
                     .uri(baseUrl + path)
@@ -67,6 +70,6 @@ public class RegisterAdmClient {
         }
     }
 
-    private record ProfileResponse(Long id) {
+    private record ProfileResponse(UUID id) {
     }
 }

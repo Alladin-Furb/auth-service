@@ -9,6 +9,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.util.UUID;
 
 @Entity
 @Table(name = "users", indexes = {
@@ -17,8 +21,10 @@ import jakarta.persistence.Table;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(length = 36, updatable = false, nullable = false)
+    private UUID id;
 
     @Column(nullable = false)
     private String name;
@@ -33,13 +39,14 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
-    @Column(name = "profile_id")
-    private Long profileId;
+    @Column(name = "profile_id", length = 36)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    private UUID profileId;
 
     protected User() {
     }
 
-    public User(String name, String email, String password, Role role, Long profileId) {
+    public User(String name, String email, String password, Role role, UUID profileId) {
         this.name = name;
         this.email = email;
         this.password = password;
@@ -47,7 +54,7 @@ public class User {
         this.profileId = profileId;
     }
 
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
@@ -75,7 +82,7 @@ public class User {
         this.role = role;
     }
 
-    public Long getProfileId() {
+    public UUID getProfileId() {
         return profileId;
     }
 }

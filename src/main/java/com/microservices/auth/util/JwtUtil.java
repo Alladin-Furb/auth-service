@@ -27,11 +27,12 @@ public class JwtUtil {
         var builder = Jwts.builder()
                 .subject(String.valueOf(user.getId()))
                 .claim("role", user.getRole().name())
+                .claim("name", user.getName())
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expiration));
 
         if (user.getProfileId() != null) {
-            builder.claim("profileId", user.getProfileId());
+            builder.claim("profileId", user.getProfileId().toString());
         }
 
         return builder.signWith(signingKey).compact();

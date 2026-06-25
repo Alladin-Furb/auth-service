@@ -1,7 +1,9 @@
 package com.microservices.auth.dto;
 
+import java.util.UUID;
+
 public record TemporaryPasswordResponse(
-        Long userId,
+        UUID userId,
         String email,
         String temporaryPassword
 ) {

@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -47,7 +48,7 @@ public class AuthService {
     @Transactional
     public UserResponse criarAluno(CreateAlunoAccountRequest request, String correlationId) {
         validarEmailDisponivel(request.email());
-        Long profileId = registerAdmClient.criarAluno(request, correlationId);
+        UUID profileId = registerAdmClient.criarAluno(request, correlationId);
         return salvarUsuario(
                 request.name(), request.email(), request.password(),
                 Role.ROLE_ALUNO, profileId);
@@ -58,7 +59,7 @@ public class AuthService {
             CreateMotoristaAccountRequest request,
             String correlationId) {
         validarEmailDisponivel(request.email());
-        Long profileId = registerAdmClient.criarMotorista(request, correlationId);
+        UUID profileId = registerAdmClient.criarMotorista(request, correlationId);
         return salvarUsuario(
                 request.name(), request.email(), request.password(),
                 Role.ROLE_MOTORISTA, profileId);
@@ -89,7 +90,7 @@ public class AuthService {
     }
 
     @Transactional
-    public TemporaryPasswordResponse gerarSenhaTemporaria(Long userId) {
+    public TemporaryPasswordResponse gerarSenhaTemporaria(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(
                         "User not found", HttpStatus.NOT_FOUND));
@@ -113,7 +114,7 @@ public class AuthService {
             String email,
             String password,
             Role role,
-            Long profileId) {
+            UUID profileId) {
         User user = new User(
                 name,
                 email,
