@@ -39,8 +39,6 @@ public class AuthDataInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        jdbcTemplate.execute(
-                "ALTER TABLE users MODIFY COLUMN role VARCHAR(32) NOT NULL");
         jdbcTemplate.update(
                 "UPDATE users SET role = 'ROLE_ALUNO' WHERE role = 'ROLE_USER'");
 
